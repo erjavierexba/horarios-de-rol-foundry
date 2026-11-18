@@ -132,6 +132,56 @@ function openSchedule() {
   scheduleApp.render(true);
 }
 
+function addScheduleSceneControl(controls) {
+  const title = "Horarios de rol";
+  const icon = "fas fa-calendar-check";
+
+  // Foundry v12 entrega un array; v13 usa un registro indexado por nombre.
+  if (Array.isArray(controls)) {
+    const control = {
+      name: "roleSchedule",
+      title,
+      icon,
+      layer: "controls",
+      tools: [{
+        name: "openRoleSchedule",
+        title: "Abrir horarios de rol",
+        icon,
+        button: true,
+        onClick: openSchedule
+      }]
+    };
+    const notesIndex = controls.findIndex((entry) => entry.name === "notes");
+    controls.splice(notesIndex >= 0 ? notesIndex + 1 : controls.length, 0, control);
+    return;
+  }
+
+  const notesOrder = Number(controls.notes?.order);
+  const lastOrder = Math.max(0, ...Object.values(controls).map((control) => Number(control.order) || 0));
+  controls.roleSchedule = {
+    name: "roleSchedule",
+    title,
+    icon,
+    order: Number.isFinite(notesOrder) ? notesOrder + 1 : lastOrder + 1,
+    visible: true,
+    activeTool: "openRoleSchedule",
+    tools: {
+      openRoleSchedule: {
+        name: "openRoleSchedule",
+        title: "Abrir horarios de rol",
+        icon,
+        order: 0,
+        button: true,
+        visible: true,
+        onChange: openSchedule
+      }
+    },
+    onChange: (_event, active) => {
+      if (active) openSchedule();
+    }
+  };
+}
+
 function rootElement(html) {
   if (html instanceof HTMLElement) return html;
   if (html?.[0] instanceof HTMLElement) return html[0];
@@ -148,6 +198,8 @@ Hooks.once("init", () => {
     restricted: false
   });
 });
+
+Hooks.on("getSceneControlButtons", addScheduleSceneControl);
 
 Hooks.on("renderPlayerList", (_app, html) => {
   const root = rootElement(html);

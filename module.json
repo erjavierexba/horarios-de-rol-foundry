@@ -2,7 +2,7 @@
   "id": "horarios-de-rol",
   "title": "Horarios de rol",
   "description": "Disponibilidad semanal compartida para organizar partidas por mañana, tarde y noche, con notas para cada día.",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "authors": [
     {
       "name": "Francisco Javier Expósito Bautista"
