@@ -13,4 +13,10 @@ Los datos se guardan como una bandera del usuario dentro del mundo de Foundry. E
 
 Copia o enlaza la carpeta `horarios-de-rol` dentro de `Data/modules`, reinicia Foundry y activa **Horarios de rol** en la gestión de módulos del mundo.
 
+También puedes instalarlo desde **Instalar módulo** usando esta URL de manifiesto:
+
+```text
+https://raw.githubusercontent.com/erjavierexba/horarios-de-rol-foundry/main/module.json
+```
+
 Compatible con Foundry VTT 12 y 13.
