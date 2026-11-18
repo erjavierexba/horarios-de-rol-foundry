@@ -78,6 +78,7 @@
           <p class="eyebrow">TODO EL GRUPO</p>
           <h2>Cuándo podemos jugar</h2>
           <p>{{weekRange}}</p>
+          {{#if bestCount}}<p class="best-legend"><i class="fas fa-circle"></i> Mayor coincidencia: {{bestCount}}</p>{{/if}}
         </div>
         <div class="group-icon"><i class="fas fa-user-group"></i></div>
       </div>
@@ -91,8 +92,14 @@
             </header>
             <div class="overview-slots">
               {{#each slots}}
-                <div class="overview-slot" title="{{label}}">
-                  <h4><i class="fas {{icon}}"></i><span>{{label}}</span></h4>
+                <div class="overview-slot {{#if isBest}}best-slot{{/if}} {{#if @root.canSchedule}}gm-editable{{/if}}"
+                     {{#if @root.canSchedule}}data-action="schedule-session" data-date="{{../dateKey}}" data-slot="{{key}}"
+                     role="button" tabindex="0" title="Programar {{../label}} por la {{label}} como próxima sesión"{{else}}
+                     title="{{label}}: {{users.length}} disponibles"{{/if}}>
+                  <h4>
+                    <span><i class="fas {{icon}}"></i>{{label}}</span>
+                    <b>{{users.length}}</b>
+                  </h4>
                   <div class="player-chips">
                     {{#each users}}
                       <span class="player-chip role-schedule-user" data-user-id="{{id}}" style="--user-color: {{color}}">

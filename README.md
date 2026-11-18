@@ -7,6 +7,8 @@ Un planificador por semanas reales para grupos de rol. Cada usuario puede:
 - elegir mañana, tarde y/o noche;
 - escribir una nota por día, por ejemplo, `solo desde las 18 h`;
 - consultar en la misma ventana la disponibilidad de todo el grupo.
+- identificar automáticamente los tramos con mayor disponibilidad;
+- programar la próxima sesión nativa de Foundry desde un tramo del resumen, si eres gamemaster.
 
 Los datos de cada semana se guardan como una bandera del usuario dentro del mundo de Foundry. El horario se abre desde el botón de calendario **Horarios de rol** de la barra de controles de escena, situado debajo de **Journal Notes**. También puede abrirse desde la lista de jugadores o desde **Configurar ajustes → Ajustes del módulo**.
 

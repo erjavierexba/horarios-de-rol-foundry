@@ -75,6 +75,50 @@ function formatWeekRange(value) {
   return `${start.getDate()} — ${end.getDate()} ${endMonth} ${end.getFullYear()}`;
 }
 
+function dateKey(value) {
+  const date = new Date(value);
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${date.getFullYear()}-${month}-${day}`;
+}
+
+function dateTimeLocalValue(value) {
+  const date = new Date(value.getTime() - (value.getTimezoneOffset() * 60000));
+  return date.toISOString().slice(0, 16);
+}
+
+async function openNextSessionEditor(dayKey, slotKey) {
+  if (!game.user.isGM) return;
+  const hours = { morning: 10, afternoon: 17, night: 21 };
+  const date = new Date(`${dayKey}T12:00:00`);
+  date.setHours(hours[slotKey] ?? 20, 0, 0, 0);
+
+  let app;
+  const WorldConfigV2 = foundry.applications?.sidebar?.apps?.WorldConfig;
+  if (WorldConfigV2) {
+    app = new WorldConfigV2({ world: game.world });
+    await app.render({ force: true });
+  } else if (globalThis.WorldConfig) {
+    app = new globalThis.WorldConfig(game.world);
+    app.render(true);
+  } else {
+    ui.notifications.error("No se ha podido abrir la configuración de la próxima sesión.");
+    return;
+  }
+
+  await new Promise((resolve) => requestAnimationFrame(resolve));
+  const root = app.element instanceof HTMLElement ? app.element : app.element?.[0];
+  const input = root?.querySelector('input[name="nextSession"]') ?? app.form?.elements?.nextSession;
+  if (!input) {
+    ui.notifications.warn("Abre el campo Próxima sesión en la configuración del mundo.");
+    return;
+  }
+  input.value = dateTimeLocalValue(date);
+  input.dispatchEvent(new Event("change", { bubbles: true }));
+  input.focus();
+  ui.notifications.info("Revisa la hora y guarda la configuración para programar la sesión.");
+}
+
 function normalizeAvailability(value = {}) {
   const weeks = {};
   if (value?.weeks && typeof value.weeks === "object") {
@@ -126,6 +170,28 @@ class RoleScheduleApp extends FormApplication {
         color: user.color?.css ?? user.color ?? "#6c8cff",
         schedule: scheduleForWeek(user.getFlag(MODULE_ID, FLAG_KEY), selectedWeek)
       }));
+    const overview = DAYS.map(([key, label], index) => {
+      const date = addDays(this.weekStart, index);
+      return {
+        key,
+        label,
+        dateKey: dateKey(date),
+        dateLabel: date.toLocaleDateString("es-ES", { day: "numeric", month: "short" }).replace(".", ""),
+        slots: SLOTS.map(([slotKey, slotLabel, icon]) => ({
+          key: slotKey,
+          label: slotLabel,
+          icon,
+          users: users.filter((user) => user.schedule[key][slotKey])
+        })),
+        notes: users
+          .filter((user) => user.schedule[key].note)
+          .map((user) => ({ name: user.name, color: user.color, text: user.schedule[key].note }))
+      };
+    });
+    const bestCount = Math.max(0, ...overview.flatMap((day) => day.slots.map((slot) => slot.users.length)));
+    for (const day of overview) {
+      for (const slot of day.slots) slot.isBest = bestCount > 0 && slot.users.length === bestCount;
+    }
 
     return {
       ...context,
@@ -134,6 +200,8 @@ class RoleScheduleApp extends FormApplication {
       weekNumber: weekNumber(this.weekStart),
       weekRange: formatWeekRange(this.weekStart),
       isCurrentWeek: selectedWeek === weekKey(new Date()),
+      canSchedule: game.user.isGM,
+      bestCount,
       days: DAYS.map(([key, label], index) => ({
         key,
         label,
@@ -148,22 +216,7 @@ class RoleScheduleApp extends FormApplication {
           checked: mine[key][slotKey]
         }))
       })),
-      overview: DAYS.map(([key, label], index) => ({
-        key,
-        label,
-        dateLabel: addDays(this.weekStart, index)
-          .toLocaleDateString("es-ES", { day: "numeric", month: "short" })
-          .replace(".", ""),
-        slots: SLOTS.map(([slotKey, slotLabel, icon]) => ({
-          key: slotKey,
-          label: slotLabel,
-          icon,
-          users: users.filter((user) => user.schedule[key][slotKey])
-        })),
-        notes: users
-          .filter((user) => user.schedule[key].note)
-          .map((user) => ({ name: user.name, color: user.color, text: user.schedule[key].note }))
-      }))
+      overview
     };
   }
 
@@ -176,6 +229,14 @@ class RoleScheduleApp extends FormApplication {
     html.find("[data-action='current-week']").on("click", () => {
       this.weekStart = startOfWeek(new Date());
       this.render(false);
+    });
+    html.find("[data-action='schedule-session']").on("click", async (event) => {
+      await openNextSessionEditor(event.currentTarget.dataset.date, event.currentTarget.dataset.slot);
+    });
+    html.find("[data-action='schedule-session']").on("keydown", (event) => {
+      if (event.key !== "Enter" && event.key !== " ") return;
+      event.preventDefault();
+      event.currentTarget.click();
     });
     html.find("[data-action='clear']").on("click", async () => {
       const confirmed = await Dialog.confirm({

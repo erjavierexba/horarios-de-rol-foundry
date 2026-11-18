@@ -2,10 +2,10 @@
   "id": "horarios-de-rol",
   "title": "Horarios de rol",
   "description": "Disponibilidad semanal compartida para organizar partidas por mañana, tarde y noche, con notas para cada día.",
-  "version": "1.1.1",
+  "version": "1.2.0",
   "url": "https://github.com/erjavierexba/horarios-de-rol-foundry",
   "manifest": "https://raw.githubusercontent.com/erjavierexba/horarios-de-rol-foundry/main/module.json",
-  "download": "https://github.com/erjavierexba/horarios-de-rol-foundry/releases/download/v1.1.1/horarios-de-rol.zip",
+  "download": "https://github.com/erjavierexba/horarios-de-rol-foundry/releases/download/v1.2.0/horarios-de-rol.zip",
   "authors": [
     {
       "name": "Francisco Javier Expósito Bautista"
