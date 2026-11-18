@@ -106,7 +106,7 @@ class RoleScheduleApp extends FormApplication {
       title: "Horarios de rol",
       template: `modules/${MODULE_ID}/templates/schedule.hbs`,
       classes: ["horarios-de-rol", "sheet"],
-      width: 960,
+      width: 1180,
       height: "auto",
       resizable: true,
       closeOnSubmit: false,

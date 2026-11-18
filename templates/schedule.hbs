@@ -28,7 +28,8 @@
     </button>
   </nav>
 
-  <section class="role-schedule-editor" aria-label="Mi disponibilidad para esta semana">
+  <main class="role-schedule-layout">
+    <section class="role-schedule-editor" aria-label="Mi disponibilidad para esta semana">
     <div class="editor-heading">
       <div>
         <h3>Mi disponibilidad</h3>
@@ -69,50 +70,51 @@
         <i class="fas fa-check"></i> Guardar esta semana
       </button>
     </div>
-  </section>
+    </section>
 
-  <section class="role-schedule-overview">
-    <div class="section-heading">
-      <div>
-        <p class="eyebrow">DISPONIBILIDAD COMPARTIDA</p>
-        <h2>Cuándo podemos jugar</h2>
-        <p>{{weekRange}}</p>
+    <section class="role-schedule-overview">
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow">TODO EL GRUPO</p>
+          <h2>Cuándo podemos jugar</h2>
+          <p>{{weekRange}}</p>
+        </div>
+        <div class="group-icon"><i class="fas fa-user-group"></i></div>
       </div>
-      <div class="group-icon"><i class="fas fa-user-group"></i></div>
-    </div>
 
-    <div class="overview-days">
-      {{#each overview}}
-        <article class="overview-day">
-          <header>
-            <h3>{{label}}</h3>
-            <span>{{dateLabel}}</span>
-          </header>
-          <div class="overview-slots">
-            {{#each slots}}
-              <div class="overview-slot">
-                <h4><i class="fas {{icon}}"></i> {{label}}</h4>
-                <div class="player-chips">
-                  {{#each users}}
-                    <span class="player-chip role-schedule-user" data-user-id="{{id}}" style="--user-color: {{color}}">
-                      <i class="fas fa-circle"></i>{{name}}
-                    </span>
-                  {{else}}
-                    <span class="nobody">—</span>
-                  {{/each}}
+      <div class="overview-days">
+        {{#each overview}}
+          <article class="overview-day">
+            <header>
+              <h3>{{label}}</h3>
+              <span>{{dateLabel}}</span>
+            </header>
+            <div class="overview-slots">
+              {{#each slots}}
+                <div class="overview-slot" title="{{label}}">
+                  <h4><i class="fas {{icon}}"></i><span>{{label}}</span></h4>
+                  <div class="player-chips">
+                    {{#each users}}
+                      <span class="player-chip role-schedule-user" data-user-id="{{id}}" style="--user-color: {{color}}">
+                        <i class="fas fa-circle"></i>{{name}}
+                      </span>
+                    {{else}}
+                      <span class="nobody">—</span>
+                    {{/each}}
+                  </div>
                 </div>
-              </div>
-            {{/each}}
-          </div>
-          {{#if notes.length}}
-            <div class="overview-notes">
-              {{#each notes}}
-                <p><strong style="--user-color: {{color}}">{{name}}</strong><span>{{text}}</span></p>
               {{/each}}
             </div>
-          {{/if}}
-        </article>
-      {{/each}}
-    </div>
-  </section>
+            {{#if notes.length}}
+              <div class="overview-notes">
+                {{#each notes}}
+                  <p><strong style="--user-color: {{color}}">{{name}}</strong><span>{{text}}</span></p>
+                {{/each}}
+              </div>
+            {{/if}}
+          </article>
+        {{/each}}
+      </div>
+    </section>
+  </main>
 </form>
