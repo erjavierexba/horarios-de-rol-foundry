@@ -1,0 +1,28 @@
+{
+  "id": "horarios-de-rol",
+  "title": "Horarios de rol",
+  "description": "Disponibilidad semanal compartida para organizar partidas por mañana, tarde y noche, con notas para cada día.",
+  "version": "1.0.0",
+  "authors": [
+    {
+      "name": "Francisco Javier Expósito Bautista"
+    }
+  ],
+  "compatibility": {
+    "minimum": "12",
+    "verified": "13"
+  },
+  "esmodules": [
+    "scripts/horarios-de-rol.js"
+  ],
+  "styles": [
+    "styles/horarios-de-rol.css"
+  ],
+  "languages": [
+    {
+      "lang": "es",
+      "name": "Español",
+      "path": "lang/es.json"
+    }
+  ]
+}

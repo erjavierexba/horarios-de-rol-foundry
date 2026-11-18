@@ -1,0 +1,80 @@
+<form class="role-schedule-form" autocomplete="off">
+  <header class="role-schedule-hero">
+    <div>
+      <p class="eyebrow">TU SEMANA, DE UN VISTAZO</p>
+      <h2>Disponibilidad de {{userName}}</h2>
+      <p>Marca todos los tramos en los que podrías jugar. Las notas son visibles para el grupo.</p>
+    </div>
+    <i class="fas fa-dice-d20" aria-hidden="true"></i>
+  </header>
+
+  <div class="role-schedule-editor" role="table" aria-label="Mi disponibilidad semanal">
+    <div class="role-schedule-row role-schedule-head" role="row">
+      <strong role="columnheader">Día</strong>
+      <strong role="columnheader"><i class="fas fa-sun"></i> Mañana</strong>
+      <strong role="columnheader"><i class="fas fa-cloud-sun"></i> Tarde</strong>
+      <strong role="columnheader"><i class="fas fa-moon"></i> Noche</strong>
+      <strong role="columnheader">Nota</strong>
+    </div>
+    {{#each days}}
+      <div class="role-schedule-row" role="row">
+        <strong class="day-name" role="cell">{{label}}</strong>
+        {{#each slots}}
+          <label class="slot-toggle" title="{{label}}" role="cell">
+            <input type="checkbox" name="days.{{../key}}.{{key}}" {{checked checked}}>
+            <span><i class="fas {{icon}}"></i><span>{{label}}</span></span>
+          </label>
+        {{/each}}
+        <label class="day-note" role="cell">
+          <span class="sr-only">Nota para el {{label}}</span>
+          <input type="text" name="days.{{key}}.note" value="{{note}}" maxlength="240"
+                 placeholder="Ej.: solo desde las 18 h">
+        </label>
+      </div>
+    {{/each}}
+  </div>
+
+  <div class="role-schedule-actions">
+    <button type="button" data-action="clear"><i class="fas fa-eraser"></i> Borrar mi horario</button>
+    <button type="submit" class="primary"><i class="fas fa-floppy-disk"></i> Guardar disponibilidad</button>
+  </div>
+
+  <section class="role-schedule-overview">
+    <div class="section-heading">
+      <div>
+        <p class="eyebrow">TODO EL GRUPO</p>
+        <h2>Cuándo podemos jugar</h2>
+      </div>
+      <i class="fas fa-users"></i>
+    </div>
+
+    <div class="overview-days">
+      {{#each overview}}
+        <article class="overview-day">
+          <h3>{{label}}</h3>
+          <div class="overview-slots">
+            {{#each slots}}
+              <div class="overview-slot">
+                <h4><i class="fas {{icon}}"></i> {{label}}</h4>
+                <div class="player-chips">
+                  {{#each users}}
+                    <span class="player-chip role-schedule-user" data-user-id="{{id}}" style="--user-color: {{color}}">{{name}}</span>
+                  {{else}}
+                    <span class="nobody">Nadie aún</span>
+                  {{/each}}
+                </div>
+              </div>
+            {{/each}}
+          </div>
+          {{#if notes.length}}
+            <div class="overview-notes">
+              {{#each notes}}
+                <p><span style="--user-color: {{color}}">{{name}}</span> {{text}}</p>
+              {{/each}}
+            </div>
+          {{/if}}
+        </article>
+      {{/each}}
+    </div>
+  </section>
+</form>
