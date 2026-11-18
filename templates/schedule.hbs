@@ -1,66 +1,104 @@
 <form class="role-schedule-form" autocomplete="off">
   <header class="role-schedule-hero">
-    <div>
-      <p class="eyebrow">TU SEMANA, DE UN VISTAZO</p>
+    <div class="hero-mark"><i class="fas fa-calendar-check" aria-hidden="true"></i></div>
+    <div class="hero-copy">
+      <p class="eyebrow">PLANIFICADOR DEL GRUPO</p>
       <h2>Disponibilidad de {{userName}}</h2>
-      <p>Marca todos los tramos en los que podrías jugar. Las notas son visibles para el grupo.</p>
+      <p>Elige cuándo puedes jugar esta semana. Cada semana conserva su propio horario.</p>
     </div>
-    <i class="fas fa-dice-d20" aria-hidden="true"></i>
+    <div class="week-stamp">
+      <span>SEMANA {{weekNumber}}</span>
+      <strong>{{weekRange}}</strong>
+    </div>
   </header>
 
-  <div class="role-schedule-editor" role="table" aria-label="Mi disponibilidad semanal">
-    <div class="role-schedule-row role-schedule-head" role="row">
-      <strong role="columnheader">Día</strong>
-      <strong role="columnheader"><i class="fas fa-sun"></i> Mañana</strong>
-      <strong role="columnheader"><i class="fas fa-cloud-sun"></i> Tarde</strong>
-      <strong role="columnheader"><i class="fas fa-moon"></i> Noche</strong>
-      <strong role="columnheader">Nota</strong>
+  <nav class="week-navigation" aria-label="Cambiar semana">
+    <button type="button" class="icon-button" data-week-shift="-1" title="Semana anterior">
+      <i class="fas fa-chevron-left"></i>
+    </button>
+    <div class="week-navigation-title">
+      <span>{{#if isCurrentWeek}}ESTA SEMANA{{else}}SEMANA {{weekNumber}}{{/if}}</span>
+      <strong>{{weekRange}}</strong>
     </div>
-    {{#each days}}
-      <div class="role-schedule-row" role="row">
-        <strong class="day-name" role="cell">{{label}}</strong>
-        {{#each slots}}
-          <label class="slot-toggle" title="{{label}}" role="cell">
-            <input type="checkbox" name="days.{{../key}}.{{key}}" {{checked checked}}>
-            <span><i class="fas {{icon}}"></i><span>{{label}}</span></span>
-          </label>
-        {{/each}}
-        <label class="day-note" role="cell">
-          <span class="sr-only">Nota para el {{label}}</span>
-          <input type="text" name="days.{{key}}.note" value="{{note}}" maxlength="240"
-                 placeholder="Ej.: solo desde las 18 h">
-        </label>
-      </div>
-    {{/each}}
-  </div>
+    <button type="button" class="today-button" data-action="current-week" {{#if isCurrentWeek}}disabled{{/if}}>
+      <i class="fas fa-calendar-day"></i> Hoy
+    </button>
+    <button type="button" class="icon-button" data-week-shift="1" title="Semana siguiente">
+      <i class="fas fa-chevron-right"></i>
+    </button>
+  </nav>
 
-  <div class="role-schedule-actions">
-    <button type="button" data-action="clear"><i class="fas fa-eraser"></i> Borrar mi horario</button>
-    <button type="submit" class="primary"><i class="fas fa-floppy-disk"></i> Guardar disponibilidad</button>
-  </div>
+  <section class="role-schedule-editor" aria-label="Mi disponibilidad para esta semana">
+    <div class="editor-heading">
+      <div>
+        <h3>Mi disponibilidad</h3>
+        <p>Marca uno o varios momentos del día y añade cualquier detalle importante.</p>
+      </div>
+      <span class="privacy-note"><i class="fas fa-users"></i> Visible para el grupo</span>
+    </div>
+
+    <div class="day-list">
+      {{#each days}}
+        <article class="day-card">
+          <div class="day-date">
+            <strong>{{label}}</strong>
+            <span>{{dateLabel}}</span>
+          </div>
+          <div class="slot-segments" aria-label="Disponibilidad del {{label}}">
+            {{#each slots}}
+              <label class="slot-toggle" title="{{label}}">
+                <input type="checkbox" name="days.{{../key}}.{{key}}" {{checked checked}}>
+                <span><i class="fas {{icon}}"></i>{{label}}</span>
+              </label>
+            {{/each}}
+          </div>
+          <label class="day-note">
+            <span><i class="fas fa-pen"></i> Nota</span>
+            <input type="text" name="days.{{key}}.note" value="{{note}}" maxlength="240"
+                   placeholder="Ej.: solo desde las 18 h">
+          </label>
+        </article>
+      {{/each}}
+    </div>
+
+    <div class="role-schedule-actions">
+      <button type="button" class="danger-button" data-action="clear">
+        <i class="fas fa-trash-can"></i> Borrar esta semana
+      </button>
+      <button type="submit" class="save-button">
+        <i class="fas fa-check"></i> Guardar esta semana
+      </button>
+    </div>
+  </section>
 
   <section class="role-schedule-overview">
     <div class="section-heading">
       <div>
-        <p class="eyebrow">TODO EL GRUPO</p>
+        <p class="eyebrow">DISPONIBILIDAD COMPARTIDA</p>
         <h2>Cuándo podemos jugar</h2>
+        <p>{{weekRange}}</p>
       </div>
-      <i class="fas fa-users"></i>
+      <div class="group-icon"><i class="fas fa-user-group"></i></div>
     </div>
 
     <div class="overview-days">
       {{#each overview}}
         <article class="overview-day">
-          <h3>{{label}}</h3>
+          <header>
+            <h3>{{label}}</h3>
+            <span>{{dateLabel}}</span>
+          </header>
           <div class="overview-slots">
             {{#each slots}}
               <div class="overview-slot">
                 <h4><i class="fas {{icon}}"></i> {{label}}</h4>
                 <div class="player-chips">
                   {{#each users}}
-                    <span class="player-chip role-schedule-user" data-user-id="{{id}}" style="--user-color: {{color}}">{{name}}</span>
+                    <span class="player-chip role-schedule-user" data-user-id="{{id}}" style="--user-color: {{color}}">
+                      <i class="fas fa-circle"></i>{{name}}
+                    </span>
                   {{else}}
-                    <span class="nobody">Nadie aún</span>
+                    <span class="nobody">—</span>
                   {{/each}}
                 </div>
               </div>
@@ -69,7 +107,7 @@
           {{#if notes.length}}
             <div class="overview-notes">
               {{#each notes}}
-                <p><span style="--user-color: {{color}}">{{name}}</span> {{text}}</p>
+                <p><strong style="--user-color: {{color}}">{{name}}</strong><span>{{text}}</span></p>
               {{/each}}
             </div>
           {{/if}}

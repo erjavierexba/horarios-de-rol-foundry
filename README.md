@@ -1,13 +1,14 @@
 # Horarios de rol para Foundry VTT
 
-Un planificador semanal sencillo para grupos de rol. Cada usuario puede:
+Un planificador por semanas reales para grupos de rol. Cada usuario puede:
 
-- marcar su disponibilidad de lunes a domingo;
+- navegar entre semanas y guardar un horario diferente en cada una;
+- marcar su disponibilidad de lunes a domingo con sus fechas concretas;
 - elegir mañana, tarde y/o noche;
 - escribir una nota por día, por ejemplo, `solo desde las 18 h`;
 - consultar en la misma ventana la disponibilidad de todo el grupo.
 
-Los datos se guardan como una bandera del usuario dentro del mundo de Foundry. El horario se abre desde el botón de calendario **Horarios de rol** de la barra de controles de escena, situado debajo de **Journal Notes**. También puede abrirse desde la lista de jugadores o desde **Configurar ajustes → Ajustes del módulo**.
+Los datos de cada semana se guardan como una bandera del usuario dentro del mundo de Foundry. El horario se abre desde el botón de calendario **Horarios de rol** de la barra de controles de escena, situado debajo de **Journal Notes**. También puede abrirse desde la lista de jugadores o desde **Configurar ajustes → Ajustes del módulo**.
 
 ## Instalación local
 

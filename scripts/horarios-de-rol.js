@@ -33,12 +33,73 @@ function normalizeSchedule(value = {}) {
   }));
 }
 
-function escapeSelector(value) {
-  if (globalThis.CSS?.escape) return CSS.escape(value);
-  return String(value).replace(/[^a-zA-Z0-9_-]/g, "\\$&");
+function startOfWeek(value = new Date()) {
+  const date = new Date(value);
+  date.setHours(12, 0, 0, 0);
+  date.setDate(date.getDate() - ((date.getDay() + 6) % 7));
+  return date;
+}
+
+function addDays(value, amount) {
+  const date = new Date(value);
+  date.setDate(date.getDate() + amount);
+  return date;
+}
+
+function weekKey(value) {
+  const date = startOfWeek(value);
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${date.getFullYear()}-${month}-${day}`;
+}
+
+function weekNumber(value) {
+  const date = startOfWeek(value);
+  const utc = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+  utc.setUTCDate(utc.getUTCDate() + 3);
+  const firstThursday = new Date(Date.UTC(utc.getUTCFullYear(), 0, 4));
+  return 1 + Math.round((utc - firstThursday) / 604800000);
+}
+
+function formatWeekRange(value) {
+  const start = startOfWeek(value);
+  const end = addDays(start, 6);
+  const startMonth = start.toLocaleDateString("es-ES", { month: "short" }).replace(".", "");
+  const endMonth = end.toLocaleDateString("es-ES", { month: "short" }).replace(".", "");
+  if (start.getFullYear() !== end.getFullYear()) {
+    return `${start.getDate()} ${startMonth} ${start.getFullYear()} — ${end.getDate()} ${endMonth} ${end.getFullYear()}`;
+  }
+  if (start.getMonth() !== end.getMonth()) {
+    return `${start.getDate()} ${startMonth} — ${end.getDate()} ${endMonth} ${end.getFullYear()}`;
+  }
+  return `${start.getDate()} — ${end.getDate()} ${endMonth} ${end.getFullYear()}`;
+}
+
+function normalizeAvailability(value = {}) {
+  const weeks = {};
+  if (value?.weeks && typeof value.weeks === "object") {
+    for (const [key, schedule] of Object.entries(value.weeks)) {
+      if (/^\d{4}-\d{2}-\d{2}$/.test(key)) weeks[key] = normalizeSchedule(schedule);
+    }
+  }
+  return { version: 2, weeks };
+}
+
+function scheduleForWeek(value, key) {
+  if (value?.weeks && typeof value.weeks === "object") return normalizeSchedule(value.weeks[key]);
+  // La versión 1 guardaba una única semana recurrente. Se conserva como la semana actual.
+  if (value && key === weekKey(new Date()) && DAYS.some(([dayKey]) => value[dayKey])) {
+    return normalizeSchedule(value);
+  }
+  return normalizeSchedule();
 }
 
 class RoleScheduleApp extends FormApplication {
+  constructor(...args) {
+    super(...args);
+    this.weekStart = startOfWeek(new Date());
+  }
+
   static get defaultOptions() {
     return foundry.utils.mergeObject(super.defaultOptions, {
       id: "role-schedule",
@@ -55,22 +116,30 @@ class RoleScheduleApp extends FormApplication {
 
   getData(options = {}) {
     const context = super.getData(options);
-    const mine = normalizeSchedule(game.user.getFlag(MODULE_ID, FLAG_KEY));
+    const selectedWeek = weekKey(this.weekStart);
+    const mine = scheduleForWeek(game.user.getFlag(MODULE_ID, FLAG_KEY), selectedWeek);
     const users = game.users
       .filter((user) => !user.isGM || user.active || user.getFlag(MODULE_ID, FLAG_KEY))
       .map((user) => ({
         id: user.id,
         name: user.name,
         color: user.color?.css ?? user.color ?? "#6c8cff",
-        schedule: normalizeSchedule(user.getFlag(MODULE_ID, FLAG_KEY))
+        schedule: scheduleForWeek(user.getFlag(MODULE_ID, FLAG_KEY), selectedWeek)
       }));
 
     return {
       ...context,
       userName: game.user.name,
-      days: DAYS.map(([key, label]) => ({
+      weekKey: selectedWeek,
+      weekNumber: weekNumber(this.weekStart),
+      weekRange: formatWeekRange(this.weekStart),
+      isCurrentWeek: selectedWeek === weekKey(new Date()),
+      days: DAYS.map(([key, label], index) => ({
         key,
         label,
+        dateLabel: addDays(this.weekStart, index)
+          .toLocaleDateString("es-ES", { day: "numeric", month: "short" })
+          .replace(".", ""),
         note: mine[key].note,
         slots: SLOTS.map(([slotKey, slotLabel, icon]) => ({
           key: slotKey,
@@ -79,9 +148,12 @@ class RoleScheduleApp extends FormApplication {
           checked: mine[key][slotKey]
         }))
       })),
-      overview: DAYS.map(([key, label]) => ({
+      overview: DAYS.map(([key, label], index) => ({
         key,
         label,
+        dateLabel: addDays(this.weekStart, index)
+          .toLocaleDateString("es-ES", { day: "numeric", month: "short" })
+          .replace(".", ""),
         slots: SLOTS.map(([slotKey, slotLabel, icon]) => ({
           key: slotKey,
           label: slotLabel,
@@ -97,14 +169,24 @@ class RoleScheduleApp extends FormApplication {
 
   activateListeners(html) {
     super.activateListeners(html);
+    html.find("[data-week-shift]").on("click", (event) => {
+      this.weekStart = addDays(this.weekStart, Number(event.currentTarget.dataset.weekShift) * 7);
+      this.render(false);
+    });
+    html.find("[data-action='current-week']").on("click", () => {
+      this.weekStart = startOfWeek(new Date());
+      this.render(false);
+    });
     html.find("[data-action='clear']").on("click", async () => {
       const confirmed = await Dialog.confirm({
-        title: "Borrar mi horario",
-        content: "<p>¿Quieres borrar toda tu disponibilidad y tus notas?</p>"
+        title: "Borrar esta semana",
+        content: `<p>¿Quieres borrar tu disponibilidad y tus notas de la semana <strong>${formatWeekRange(this.weekStart)}</strong>?</p>`
       });
       if (!confirmed) return;
-      await game.user.setFlag(MODULE_ID, FLAG_KEY, normalizeSchedule());
-      ui.notifications.info("Tu horario se ha borrado.");
+      const availability = normalizeAvailability(game.user.getFlag(MODULE_ID, FLAG_KEY));
+      delete availability.weeks[weekKey(this.weekStart)];
+      await game.user.setFlag(MODULE_ID, FLAG_KEY, availability);
+      ui.notifications.info("Tu horario de esta semana se ha borrado.");
       this.render(false);
     });
   }
@@ -119,8 +201,10 @@ class RoleScheduleApp extends FormApplication {
       day.note = submitted.note ?? "";
       schedule[dayKey] = day;
     }
-    await game.user.setFlag(MODULE_ID, FLAG_KEY, normalizeSchedule(schedule));
-    ui.notifications.info("Tu disponibilidad se ha guardado.");
+    const availability = normalizeAvailability(game.user.getFlag(MODULE_ID, FLAG_KEY));
+    availability.weeks[weekKey(this.weekStart)] = normalizeSchedule(schedule);
+    await game.user.setFlag(MODULE_ID, FLAG_KEY, availability);
+    ui.notifications.info(`Disponibilidad guardada para la semana ${formatWeekRange(this.weekStart)}.`);
     this.render(false);
   }
 }
@@ -213,12 +297,10 @@ Hooks.on("renderPlayerList", (_app, html) => {
   header.append(button);
 });
 
-Hooks.on("updateUser", (user, changes) => {
+Hooks.on("updateUser", (_user, changes) => {
   const flagChanges = foundry.utils.getProperty(changes, `flags.${MODULE_ID}`);
   if (!flagChanges || !scheduleApp?.rendered) return;
-  const selector = `.role-schedule-user[data-user-id="${escapeSelector(user.id)}"]`;
-  if (scheduleApp.element?.find?.(selector).length || user.id === game.user.id) scheduleApp.render(false);
-  else scheduleApp.render(false);
+  scheduleApp.render(false);
 });
 
 Hooks.once("ready", () => {
