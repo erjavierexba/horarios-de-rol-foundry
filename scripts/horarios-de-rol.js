@@ -270,19 +270,30 @@ class RoleScheduleApp extends Application {
   reset() {
     this.group = null;
     this.weeks = {};
-    this.error = null;
     if (this.rendered) this.render(false);
   }
 
+  // Devuelve copias locales: un reset() mientras se espera al servidor no debe romper este render.
   async load(week) {
-    this.error = null;
+    const id = groupId();
+    let group = this.group;
     try {
-      if (!this.group) this.group = (await api(`/groups/${groupId()}`)).group;
-      if (!this.weeks[week]) this.weeks[week] = (await api(`/groups/${groupId()}/weeks/${week}`)).schedules;
+      if (!group) {
+        group = (await api(`/groups/${id}`)).group;
+        if (id === groupId()) this.group = group;
+      }
+      let schedules = this.weeks[week];
+      if (!schedules) {
+        schedules = (await api(`/groups/${id}/weeks/${week}`)).schedules;
+        if (id === groupId()) this.weeks[week] = schedules;
+      }
+      return { group, schedules };
     } catch (error) {
-      this.error = error.status === 404 && !this.group
-        ? "El horario de este mundo ya no existe en el servidor."
-        : `No se ha podido conectar con el servidor de horarios (${error.message}).`;
+      return {
+        error: error.status === 404 && !group
+          ? "El horario de este mundo ya no existe en el servidor."
+          : `No se ha podido conectar con el servidor de horarios (${error.message}).`
+      };
     }
   }
 
@@ -291,21 +302,21 @@ class RoleScheduleApp extends Application {
     if (!base.configured) return base;
 
     const selectedWeek = weekKey(this.weekStart);
-    await this.load(selectedWeek);
+    const weekStart = this.weekStart;
+    const { group, schedules = {}, error } = await this.load(selectedWeek);
     const week = {
-      weekNumber: weekNumber(this.weekStart),
-      weekRange: formatWeekRange(this.weekStart),
+      weekNumber: weekNumber(weekStart),
+      weekRange: formatWeekRange(weekStart),
       isCurrentWeek: selectedWeek === weekKey(new Date())
     };
-    if (this.error) return { ...base, ...week, error: this.error, groupId: groupId() };
+    if (error) return { ...base, ...week, error, groupId: groupId() };
 
-    const schedules = this.weeks[selectedWeek] ?? {};
-    const users = this.group.users
+    const users = group.users
       .filter((user) => schedules[user.id])
       .map((user) => ({ ...user, schedule: schedules[user.id] }));
 
     const overview = DAYS.map(([key, label], index) => {
-      const date = addDays(this.weekStart, index);
+      const date = addDays(weekStart, index);
       return {
         key,
         label,
@@ -326,14 +337,14 @@ class RoleScheduleApp extends Application {
     for (const day of overview) {
       for (const slot of day.slots) slot.isBest = bestCount > 0 && slot.users.length === bestCount;
     }
-    const missing = this.group.users.filter((user) => !user.isGM && !schedules[user.id]).map((user) => user.name);
+    const missing = group.users.filter((user) => !user.isGM && !schedules[user.id]).map((user) => user.name);
 
     return {
       ...base,
       ...week,
       groupId: groupId(),
-      groupName: this.group.name,
-      groupSystem: this.group.system,
+      groupName: group.name,
+      groupSystem: group.system,
       canSchedule: game.user.isGM,
       bestCount,
       missing: missing.join(", "),
