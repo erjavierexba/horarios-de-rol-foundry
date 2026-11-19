@@ -19,17 +19,16 @@
   color: var(--schedule-ink);
 }
 
-.role-schedule-form {
-  min-width: 960px;
+.role-schedule-viewer {
   background: var(--schedule-bg);
   color: var(--schedule-ink);
   font-family: var(--font-body, "Signika", sans-serif);
 }
 
-.role-schedule-form h2,
-.role-schedule-form h3,
-.role-schedule-form h4,
-.role-schedule-form p { margin-top: 0; }
+.role-schedule-viewer h2,
+.role-schedule-viewer h3,
+.role-schedule-viewer h4,
+.role-schedule-viewer p { margin-top: 0; }
 
 .role-schedule-hero {
   display: grid;
@@ -59,7 +58,7 @@
 .hero-copy { min-width: 0; }
 .hero-copy h2 { margin: 2px 0 3px; font-size: 21px; line-height: 1.15; }
 .hero-copy > p:last-child { margin-bottom: 0; color: #bac1d0; font-size: 13px; }
-.role-schedule-form .eyebrow {
+.role-schedule-viewer .eyebrow {
   margin-bottom: 4px;
   color: var(--schedule-accent);
   font-size: 10px;
@@ -91,7 +90,7 @@
 .week-navigation-title span { display: block; color: var(--schedule-muted); font-size: 9px; font-weight: 800; letter-spacing: .16em; }
 .week-navigation-title strong { font-size: 14px; }
 
-.role-schedule-form button {
+.role-schedule-viewer button {
   appearance: none;
   width: auto;
   min-height: 36px;
@@ -107,98 +106,11 @@
   box-shadow: none;
   cursor: pointer;
 }
-.role-schedule-form button:hover { border-color: var(--schedule-accent); background: var(--schedule-raised); color: white; box-shadow: none; }
-.role-schedule-form button:disabled { opacity: .38; cursor: default; }
-.role-schedule-form button:disabled:hover { border-color: var(--schedule-line); background: var(--schedule-surface); }
-.role-schedule-form .icon-button { width: 38px; padding: 0; }
+.role-schedule-viewer button:hover { border-color: var(--schedule-accent); background: var(--schedule-raised); color: white; box-shadow: none; }
+.role-schedule-viewer button:disabled { opacity: .38; cursor: default; }
+.role-schedule-viewer button:disabled:hover { border-color: var(--schedule-line); background: var(--schedule-surface); }
+.role-schedule-viewer .icon-button { width: 38px; padding: 0; }
 .today-button { color: var(--schedule-accent) !important; }
-
-.role-schedule-layout {
-  display: grid;
-  grid-template-columns: minmax(610px, 1.55fr) minmax(350px, .9fr);
-  align-items: start;
-}
-.role-schedule-editor { padding: 16px 18px 18px; border-right: 1px solid var(--schedule-line); }
-.editor-heading,
-.section-heading {
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 18px;
-  margin-bottom: 10px;
-}
-.editor-heading h3 { margin-bottom: 2px; font-size: 18px; }
-.editor-heading p { margin-bottom: 0; color: var(--schedule-muted); font-size: 12px; }
-.privacy-note { padding: 5px 9px; border-radius: 999px; background: #232734; color: #b8c0d0; font-size: 10px; white-space: nowrap; }
-.privacy-note i { margin-right: 4px; color: var(--schedule-accent); }
-
-.day-list { display: grid; gap: 6px; }
-.day-card {
-  display: grid;
-  grid-template-columns: 72px 265px minmax(175px, 1fr);
-  align-items: center;
-  gap: 10px;
-  padding: 7px 9px;
-  border: 1px solid var(--schedule-line-soft);
-  border-radius: 11px;
-  background: var(--schedule-surface);
-  transition: border-color .15s ease, background .15s ease;
-}
-.day-card:hover { border-color: #444b5e; background: #1c202a; }
-.day-date strong { display: block; margin-bottom: 0; font-size: 13px; }
-.day-date span { color: var(--schedule-muted); font-size: 9px; text-transform: uppercase; }
-
-.slot-segments {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  overflow: hidden;
-  border: 1px solid var(--schedule-line);
-  border-radius: 9px;
-  background: #10131a;
-}
-.slot-toggle { min-width: 0; cursor: pointer; }
-.slot-toggle + .slot-toggle { border-left: 1px solid var(--schedule-line); }
-.slot-toggle input { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
-.slot-toggle span {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  min-height: 34px;
-  padding: 0 7px;
-  color: var(--schedule-muted);
-  font-size: 12px;
-  transition: background .14s ease, color .14s ease;
-}
-.slot-toggle:hover span { background: #252a37; color: var(--schedule-ink); }
-.slot-toggle input:focus-visible + span { outline: 2px solid var(--schedule-violet); outline-offset: -2px; }
-.slot-toggle input:checked + span { background: var(--schedule-accent-dark); color: #bfffee; font-weight: 700; }
-.slot-toggle input:checked + span i { color: var(--schedule-accent); }
-
-.day-note { display: grid; grid-template-columns: minmax(0, 1fr); align-items: center; }
-.day-note > span { display: none; }
-.day-note > span i { margin-right: 3px; color: #747e93; }
-.day-note input {
-  width: 100%;
-  height: 34px;
-  padding: 7px 10px;
-  border: 1px solid var(--schedule-line);
-  border-radius: 9px;
-  outline: none;
-  background: #10131a;
-  color: var(--schedule-ink);
-  font: inherit;
-  font-size: 12px;
-  box-shadow: none;
-}
-.day-note input::placeholder { color: #626b7c; }
-.day-note input:focus { border-color: var(--schedule-violet); box-shadow: 0 0 0 2px rgba(149, 128, 255, .14); }
-
-.role-schedule-actions { display: flex; justify-content: flex-end; gap: 7px; padding-top: 11px; }
-.role-schedule-actions .danger-button { color: #d8a0a5; }
-.role-schedule-actions .danger-button:hover { border-color: var(--schedule-danger); color: #ffd2d6; }
-.role-schedule-actions .save-button { border-color: #6758c5; background: #695ad1; color: white; }
-.role-schedule-actions .save-button:hover { border-color: #ae9fff; background: #7b69eb; }
 
 .role-schedule-overview { padding: 16px 14px 18px; background: #0d0f15; }
 .section-heading { align-items: center; }
@@ -238,20 +150,23 @@
 
 .role-schedule-open { margin: 6px 8px; width: calc(100% - 16px); }
 
-@media (max-width: 1050px) {
-  .role-schedule-form { min-width: 900px; }
-  .role-schedule-layout { grid-template-columns: minmax(555px, 1.5fr) minmax(330px, .9fr); }
-  .day-card { grid-template-columns: 66px 235px minmax(160px, 1fr); gap: 7px; }
-  .slot-toggle span { gap: 4px; font-size: 11px; }
+.section-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 10px;
 }
+.section-heading .missing-legend { margin: 3px 0 0; color: var(--schedule-muted); font-size: 9px; }
 
-@media (max-width: 920px) {
-  .role-schedule-form { min-width: 820px; }
-  .role-schedule-hero { grid-template-columns: auto 1fr; }
-  .week-stamp { display: none; }
-  .role-schedule-layout { grid-template-columns: minmax(505px, 1.45fr) minmax(300px, .9fr); }
-  .day-card { grid-template-columns: 62px 190px minmax(150px, 1fr); }
-  .slot-toggle span { font-size: 0; }
-  .slot-toggle span i { font-size: 13px; }
-  .overview-slot h4 span { display: none; }
-}
+.role-schedule-hero .hero-actions { display: flex; gap: 6px; }
+.role-schedule-viewer .save-button { border-color: #6758c5; background: #695ad1; color: white; }
+.role-schedule-viewer .save-button:hover { border-color: #ae9fff; background: #7b69eb; }
+
+.role-schedule-empty { padding: 28px 24px; text-align: center; }
+.role-schedule-empty .hero-mark { margin: 0 auto 12px; }
+.role-schedule-empty h2 { font-size: 18px; }
+.role-schedule-empty p { color: #bac1d0; font-size: 13px; }
+.role-schedule-empty code { color: var(--schedule-accent); background: #10131a; padding: 1px 5px; border-radius: 4px; word-break: break-all; }
+.role-schedule-empty .error-text { color: var(--schedule-danger); }
+.role-schedule-empty .empty-actions { display: flex; justify-content: center; gap: 8px; }

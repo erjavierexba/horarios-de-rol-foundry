@@ -1,5 +1,8 @@
 const MODULE_ID = "horarios-de-rol";
 const FLAG_KEY = "availability";
+// URL del Worker desplegado (se puede cambiar en los ajustes del módulo).
+const DEFAULT_SERVER = "https://horarios-de-rol.horarios-de-rol-web.workers.dev";
+const REFRESH_MS = 60000;
 
 const DAYS = [
   ["monday", "Lunes"],
@@ -17,21 +20,7 @@ const SLOTS = [
   ["night", "Noche", "fa-moon"]
 ];
 
-function emptyDay() {
-  return { morning: false, afternoon: false, night: false, note: "" };
-}
-
-function normalizeSchedule(value = {}) {
-  return Object.fromEntries(DAYS.map(([key]) => {
-    const day = value?.[key] ?? {};
-    return [key, {
-      morning: Boolean(day.morning),
-      afternoon: Boolean(day.afternoon),
-      night: Boolean(day.night),
-      note: String(day.note ?? "").trim().slice(0, 240)
-    }];
-  }));
-}
+// ---------- Fechas ----------
 
 function startOfWeek(value = new Date()) {
   const date = new Date(value);
@@ -46,11 +35,15 @@ function addDays(value, amount) {
   return date;
 }
 
-function weekKey(value) {
-  const date = startOfWeek(value);
+function dateKey(value) {
+  const date = new Date(value);
   const month = String(date.getMonth() + 1).padStart(2, "0");
   const day = String(date.getDate()).padStart(2, "0");
   return `${date.getFullYear()}-${month}-${day}`;
+}
+
+function weekKey(value) {
+  return dateKey(startOfWeek(value));
 }
 
 function weekNumber(value) {
@@ -75,17 +68,137 @@ function formatWeekRange(value) {
   return `${start.getDate()} — ${end.getDate()} ${endMonth} ${end.getFullYear()}`;
 }
 
-function dateKey(value) {
-  const date = new Date(value);
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  return `${date.getFullYear()}-${month}-${day}`;
-}
-
 function dateTimeLocalValue(value) {
   const date = new Date(value.getTime() - (value.getTimezoneOffset() * 60000));
   return date.toISOString().slice(0, 16);
 }
+
+// ---------- Servidor ----------
+
+function serverUrl() {
+  return String(game.settings.get(MODULE_ID, "serverUrl") || DEFAULT_SERVER).trim().replace(/\/+$/, "");
+}
+
+function groupId() {
+  return String(game.settings.get(MODULE_ID, "groupId") ?? "").trim();
+}
+
+function webLink(userId = "") {
+  const url = new URL(serverUrl());
+  url.searchParams.set("g", groupId());
+  if (userId) url.searchParams.set("u", userId);
+  return url.toString();
+}
+
+async function api(path, options = {}) {
+  const response = await fetch(`${serverUrl()}/api${path}`, {
+    ...options,
+    headers: { "content-type": "application/json", ...(options.headers ?? {}) }
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    const error = new Error(data.error ?? `Error ${response.status}`);
+    error.status = response.status;
+    throw error;
+  }
+  return data;
+}
+
+function userColor(user) {
+  const color = user.color?.css ?? user.color?.toString?.() ?? user.color;
+  return /^#[0-9a-f]{6}$/i.test(String(color)) ? String(color) : "#6c8cff";
+}
+
+function groupPayload() {
+  return {
+    name: game.world.title,
+    system: game.system.title,
+    users: game.users.map((user) => ({ id: user.id, name: user.name, color: userColor(user), isGM: user.isGM }))
+  };
+}
+
+function isPrimaryGM() {
+  if (!game.user.isGM) return false;
+  const activeGM = game.users.activeGM;
+  return activeGM ? activeGM.isSelf : true;
+}
+
+// Las versiones 1.x guardaban la disponibilidad en banderas del usuario. Se suben al crear el horario.
+function legacyWeeks(user) {
+  const value = user.getFlag(MODULE_ID, FLAG_KEY);
+  if (!value || typeof value !== "object") return {};
+  if (value.weeks && typeof value.weeks === "object") {
+    return Object.fromEntries(Object.entries(value.weeks).filter(([key]) => /^\d{4}-\d{2}-\d{2}$/.test(key)));
+  }
+  if (DAYS.some(([key]) => value[key])) return { [weekKey(new Date())]: value };
+  return {};
+}
+
+async function migrateLegacyFlags() {
+  let migrated = 0;
+  for (const user of game.users) {
+    const weeks = legacyWeeks(user);
+    if (!Object.keys(weeks).length) continue;
+    try {
+      await api(`/groups/${groupId()}/availability`, {
+        method: "POST",
+        body: JSON.stringify({ userId: user.id, weeks })
+      });
+      migrated += 1;
+    } catch (error) {
+      console.warn(`${MODULE_ID} | No se pudo migrar el horario de ${user.name}`, error);
+    }
+  }
+  return migrated;
+}
+
+async function createGroup() {
+  if (!game.user.isGM) return;
+  if (groupId()) {
+    const confirmed = await Dialog.confirm({
+      title: "Crear un horario nuevo",
+      content: "<p>Este mundo ya tiene un horario. Si creas otro, el enlace antiguo dejará de usarse y empezaréis de cero. ¿Seguir?</p>"
+    });
+    if (!confirmed) return;
+  }
+  try {
+    const { groupId: id, adminKey } = await api("/groups", { method: "POST", body: JSON.stringify(groupPayload()) });
+    await game.settings.set(MODULE_ID, "groupId", id);
+    await game.settings.set(MODULE_ID, "adminKey", adminKey);
+    const migrated = await migrateLegacyFlags();
+    ui.notifications.info(migrated
+      ? `Horario creado. Se ha subido la disponibilidad guardada de ${migrated} usuario(s).`
+      : "Horario creado. Comparte el enlace con el grupo.");
+  } catch (error) {
+    ui.notifications.error(`No se ha podido crear el horario: ${error.message}`);
+  }
+  scheduleApp?.reset();
+}
+
+async function pushGroup({ silent = false } = {}) {
+  if (!game.user.isGM || !groupId()) return false;
+  try {
+    await api(`/groups/${groupId()}`, {
+      method: "PUT",
+      headers: { authorization: `Bearer ${game.settings.get(MODULE_ID, "adminKey")}` },
+      body: JSON.stringify(groupPayload())
+    });
+    if (!silent) ui.notifications.info("Grupo sincronizado con la web.");
+    return true;
+  } catch (error) {
+    const reason = error.status === 404
+      ? "el horario ya no existe en el servidor; crea uno nuevo."
+      : error.message;
+    ui.notifications.warn(`Horarios de rol: no se ha podido sincronizar (${reason})`);
+    return false;
+  }
+}
+
+const schedulePush = foundry.utils.debounce(() => {
+  if (isPrimaryGM()) pushGroup({ silent: true });
+}, 2000);
+
+// ---------- Próxima sesión ----------
 
 async function openNextSessionEditor(dayKey, slotKey) {
   if (!game.user.isGM) return;
@@ -119,29 +232,27 @@ async function openNextSessionEditor(dayKey, slotKey) {
   ui.notifications.info("Revisa la hora y guarda la configuración para programar la sesión.");
 }
 
-function normalizeAvailability(value = {}) {
-  const weeks = {};
-  if (value?.weeks && typeof value.weeks === "object") {
-    for (const [key, schedule] of Object.entries(value.weeks)) {
-      if (/^\d{4}-\d{2}-\d{2}$/.test(key)) weeks[key] = normalizeSchedule(schedule);
-    }
+async function copyText(text) {
+  try {
+    if (game.clipboard?.copyPlainText) await game.clipboard.copyPlainText(text);
+    else await navigator.clipboard.writeText(text);
+    ui.notifications.info("Enlace copiado.");
+  } catch {
+    new Dialog({
+      title: "Enlace del horario",
+      content: `<p>Copia este enlace y pásaselo al grupo:</p><input type="text" readonly value="${foundry.utils.escapeHTML?.(text) ?? text}" style="width:100%" onfocus="this.select()">`,
+      buttons: { ok: { label: "Cerrar" } }
+    }).render(true);
   }
-  return { version: 2, weeks };
 }
 
-function scheduleForWeek(value, key) {
-  if (value?.weeks && typeof value.weeks === "object") return normalizeSchedule(value.weeks[key]);
-  // La versión 1 guardaba una única semana recurrente. Se conserva como la semana actual.
-  if (value && key === weekKey(new Date()) && DAYS.some(([dayKey]) => value[dayKey])) {
-    return normalizeSchedule(value);
-  }
-  return normalizeSchedule();
-}
+// ---------- Visor ----------
 
-class RoleScheduleApp extends FormApplication {
+class RoleScheduleApp extends Application {
   constructor(...args) {
     super(...args);
     this.weekStart = startOfWeek(new Date());
+    this.reset();
   }
 
   static get defaultOptions() {
@@ -150,26 +261,49 @@ class RoleScheduleApp extends FormApplication {
       title: "Horarios de rol",
       template: `modules/${MODULE_ID}/templates/schedule.hbs`,
       classes: ["horarios-de-rol", "sheet"],
-      width: 1180,
+      width: 560,
       height: "auto",
-      resizable: true,
-      closeOnSubmit: false,
-      submitOnChange: false
+      resizable: true
     });
   }
 
-  getData(options = {}) {
-    const context = super.getData(options);
+  reset() {
+    this.group = null;
+    this.weeks = {};
+    this.error = null;
+    if (this.rendered) this.render(false);
+  }
+
+  async load(week) {
+    this.error = null;
+    try {
+      if (!this.group) this.group = (await api(`/groups/${groupId()}`)).group;
+      if (!this.weeks[week]) this.weeks[week] = (await api(`/groups/${groupId()}/weeks/${week}`)).schedules;
+    } catch (error) {
+      this.error = error.status === 404 && !this.group
+        ? "El horario de este mundo ya no existe en el servidor."
+        : `No se ha podido conectar con el servidor de horarios (${error.message}).`;
+    }
+  }
+
+  async getData() {
+    const base = { isGM: game.user.isGM, configured: Boolean(groupId()), serverUrl: serverUrl() };
+    if (!base.configured) return base;
+
     const selectedWeek = weekKey(this.weekStart);
-    const mine = scheduleForWeek(game.user.getFlag(MODULE_ID, FLAG_KEY), selectedWeek);
-    const users = game.users
-      .filter((user) => !user.isGM || user.active || user.getFlag(MODULE_ID, FLAG_KEY))
-      .map((user) => ({
-        id: user.id,
-        name: user.name,
-        color: user.color?.css ?? user.color ?? "#6c8cff",
-        schedule: scheduleForWeek(user.getFlag(MODULE_ID, FLAG_KEY), selectedWeek)
-      }));
+    await this.load(selectedWeek);
+    const week = {
+      weekNumber: weekNumber(this.weekStart),
+      weekRange: formatWeekRange(this.weekStart),
+      isCurrentWeek: selectedWeek === weekKey(new Date())
+    };
+    if (this.error) return { ...base, ...week, error: this.error, groupId: groupId() };
+
+    const schedules = this.weeks[selectedWeek] ?? {};
+    const users = this.group.users
+      .filter((user) => schedules[user.id])
+      .map((user) => ({ ...user, schedule: schedules[user.id] }));
+
     const overview = DAYS.map(([key, label], index) => {
       const date = addDays(this.weekStart, index);
       return {
@@ -181,10 +315,10 @@ class RoleScheduleApp extends FormApplication {
           key: slotKey,
           label: slotLabel,
           icon,
-          users: users.filter((user) => user.schedule[key][slotKey])
+          users: users.filter((user) => user.schedule[key]?.[slotKey])
         })),
         notes: users
-          .filter((user) => user.schedule[key].note)
+          .filter((user) => user.schedule[key]?.note)
           .map((user) => ({ name: user.name, color: user.color, text: user.schedule[key].note }))
       };
     });
@@ -192,30 +326,17 @@ class RoleScheduleApp extends FormApplication {
     for (const day of overview) {
       for (const slot of day.slots) slot.isBest = bestCount > 0 && slot.users.length === bestCount;
     }
+    const missing = this.group.users.filter((user) => !user.isGM && !schedules[user.id]).map((user) => user.name);
 
     return {
-      ...context,
-      userName: game.user.name,
-      weekKey: selectedWeek,
-      weekNumber: weekNumber(this.weekStart),
-      weekRange: formatWeekRange(this.weekStart),
-      isCurrentWeek: selectedWeek === weekKey(new Date()),
+      ...base,
+      ...week,
+      groupId: groupId(),
+      groupName: this.group.name,
+      groupSystem: this.group.system,
       canSchedule: game.user.isGM,
       bestCount,
-      days: DAYS.map(([key, label], index) => ({
-        key,
-        label,
-        dateLabel: addDays(this.weekStart, index)
-          .toLocaleDateString("es-ES", { day: "numeric", month: "short" })
-          .replace(".", ""),
-        note: mine[key].note,
-        slots: SLOTS.map(([slotKey, slotLabel, icon]) => ({
-          key: slotKey,
-          label: slotLabel,
-          icon,
-          checked: mine[key][slotKey]
-        }))
-      })),
+      missing: missing.join(", "),
       overview
     };
   }
@@ -230,6 +351,13 @@ class RoleScheduleApp extends FormApplication {
       this.weekStart = startOfWeek(new Date());
       this.render(false);
     });
+    html.find("[data-action='create-group']").on("click", () => createGroup());
+    html.find("[data-action='open-web']").on("click", () => window.open(webLink(game.user.id), "_blank", "noopener"));
+    html.find("[data-action='copy-link']").on("click", () => copyText(webLink()));
+    html.find("[data-action='sync']").on("click", async () => {
+      if (game.user.isGM) await pushGroup();
+      this.reset();
+    });
     html.find("[data-action='schedule-session']").on("click", async (event) => {
       await openNextSessionEditor(event.currentTarget.dataset.date, event.currentTarget.dataset.slot);
     });
@@ -238,35 +366,18 @@ class RoleScheduleApp extends FormApplication {
       event.preventDefault();
       event.currentTarget.click();
     });
-    html.find("[data-action='clear']").on("click", async () => {
-      const confirmed = await Dialog.confirm({
-        title: "Borrar esta semana",
-        content: `<p>¿Quieres borrar tu disponibilidad y tus notas de la semana <strong>${formatWeekRange(this.weekStart)}</strong>?</p>`
-      });
-      if (!confirmed) return;
-      const availability = normalizeAvailability(game.user.getFlag(MODULE_ID, FLAG_KEY));
-      delete availability.weeks[weekKey(this.weekStart)];
-      await game.user.setFlag(MODULE_ID, FLAG_KEY, availability);
-      ui.notifications.info("Tu horario de esta semana se ha borrado.");
+
+    this.refreshTimer ??= setInterval(() => {
+      if (!this.rendered || !groupId()) return;
+      delete this.weeks[weekKey(this.weekStart)];
       this.render(false);
-    });
+    }, REFRESH_MS);
   }
 
-  async _updateObject(_event, formData) {
-    const expanded = foundry.utils.expandObject(formData);
-    const schedule = {};
-    for (const [dayKey] of DAYS) {
-      const day = emptyDay();
-      const submitted = expanded.days?.[dayKey] ?? {};
-      for (const [slotKey] of SLOTS) day[slotKey] = submitted[slotKey] === true;
-      day.note = submitted.note ?? "";
-      schedule[dayKey] = day;
-    }
-    const availability = normalizeAvailability(game.user.getFlag(MODULE_ID, FLAG_KEY));
-    availability.weeks[weekKey(this.weekStart)] = normalizeSchedule(schedule);
-    await game.user.setFlag(MODULE_ID, FLAG_KEY, availability);
-    ui.notifications.info(`Disponibilidad guardada para la semana ${formatWeekRange(this.weekStart)}.`);
-    this.render(false);
+  async close(options) {
+    clearInterval(this.refreshTimer);
+    this.refreshTimer = null;
+    return super.close(options);
   }
 }
 
@@ -274,6 +385,8 @@ let scheduleApp;
 
 function openSchedule() {
   scheduleApp ??= new RoleScheduleApp();
+  // Al abrir se pide siempre la semana fresca.
+  scheduleApp.weeks = {};
   scheduleApp.render(true);
 }
 
@@ -334,10 +447,32 @@ function rootElement(html) {
 }
 
 Hooks.once("init", () => {
+  game.settings.register(MODULE_ID, "serverUrl", {
+    name: "Servidor de horarios",
+    hint: "Dirección de la web de horarios (el Worker de Cloudflare).",
+    scope: "world",
+    config: true,
+    type: String,
+    default: DEFAULT_SERVER,
+    onChange: () => scheduleApp?.reset()
+  });
+  game.settings.register(MODULE_ID, "groupId", {
+    scope: "world",
+    config: false,
+    type: String,
+    default: "",
+    onChange: () => scheduleApp?.reset()
+  });
+  game.settings.register(MODULE_ID, "adminKey", {
+    scope: "world",
+    config: false,
+    type: String,
+    default: ""
+  });
   game.settings.registerMenu(MODULE_ID, "openSchedule", {
     name: "Abrir horarios de rol",
     label: "Abrir horario",
-    hint: "Indica cuándo puedes jugar y consulta la disponibilidad del grupo.",
+    hint: "Consulta la disponibilidad del grupo y abre la web para rellenar la tuya.",
     icon: "fas fa-calendar-days",
     type: RoleScheduleApp,
     restricted: false
@@ -358,12 +493,15 @@ Hooks.on("renderPlayerList", (_app, html) => {
   header.append(button);
 });
 
+// Si cambia la lista de usuarios, la web se entera.
+Hooks.on("createUser", schedulePush);
+Hooks.on("deleteUser", schedulePush);
 Hooks.on("updateUser", (_user, changes) => {
-  const flagChanges = foundry.utils.getProperty(changes, `flags.${MODULE_ID}`);
-  if (!flagChanges || !scheduleApp?.rendered) return;
-  scheduleApp.render(false);
+  if ("name" in changes || "color" in changes || "role" in changes) schedulePush();
 });
 
 Hooks.once("ready", () => {
-  game.modules.get(MODULE_ID).api = { open: openSchedule };
+  game.modules.get(MODULE_ID).api = { open: openSchedule, sync: () => pushGroup(), link: () => webLink() };
+  // Al arrancar el mundo, el máster envía nombre, sistema y usuarios al grupo.
+  if (groupId() && isPrimaryGM()) pushGroup({ silent: true });
 });

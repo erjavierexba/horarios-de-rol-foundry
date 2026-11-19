@@ -1,0 +1,14 @@
+name = "horarios-de-rol"
+main = "src/index.js"
+compatibility_date = "2025-09-01"
+
+# La web estática se sirve desde public/; todo lo que empiece por /api lo atiende el Worker.
+[assets]
+directory = "./public"
+binding = "ASSETS"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "horarios-de-rol"
+# Base de datos D1 de producción.
+database_id = "897e8522-6f31-4a40-9f77-84855560c2d9"

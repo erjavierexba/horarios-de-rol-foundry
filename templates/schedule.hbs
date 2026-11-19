@@ -1,127 +1,119 @@
-<form class="role-schedule-form" autocomplete="off">
-  <header class="role-schedule-hero">
-    <div class="hero-mark"><i class="fas fa-calendar-check" aria-hidden="true"></i></div>
-    <div class="hero-copy">
-      <p class="eyebrow">PLANIFICADOR DEL GRUPO</p>
-      <h2>Disponibilidad de {{userName}}</h2>
-      <p>Elige cuándo puedes jugar esta semana. Cada semana conserva su propio horario.</p>
-    </div>
-    <div class="week-stamp">
-      <span>SEMANA {{weekNumber}}</span>
-      <strong>{{weekRange}}</strong>
-    </div>
-  </header>
-
-  <nav class="week-navigation" aria-label="Cambiar semana">
-    <button type="button" class="icon-button" data-week-shift="-1" title="Semana anterior">
-      <i class="fas fa-chevron-left"></i>
-    </button>
-    <div class="week-navigation-title">
-      <span>{{#if isCurrentWeek}}ESTA SEMANA{{else}}SEMANA {{weekNumber}}{{/if}}</span>
-      <strong>{{weekRange}}</strong>
-    </div>
-    <button type="button" class="today-button" data-action="current-week" {{#if isCurrentWeek}}disabled{{/if}}>
-      <i class="fas fa-calendar-day"></i> Hoy
-    </button>
-    <button type="button" class="icon-button" data-week-shift="1" title="Semana siguiente">
-      <i class="fas fa-chevron-right"></i>
-    </button>
-  </nav>
-
-  <main class="role-schedule-layout">
-    <section class="role-schedule-editor" aria-label="Mi disponibilidad para esta semana">
-    <div class="editor-heading">
-      <div>
-        <h3>Mi disponibilidad</h3>
-        <p>Marca uno o varios momentos del día y añade cualquier detalle importante.</p>
-      </div>
-      <span class="privacy-note"><i class="fas fa-users"></i> Visible para el grupo</span>
-    </div>
-
-    <div class="day-list">
-      {{#each days}}
-        <article class="day-card">
-          <div class="day-date">
-            <strong>{{label}}</strong>
-            <span>{{dateLabel}}</span>
-          </div>
-          <div class="slot-segments" aria-label="Disponibilidad del {{label}}">
-            {{#each slots}}
-              <label class="slot-toggle" title="{{label}}">
-                <input type="checkbox" name="days.{{../key}}.{{key}}" {{checked checked}}>
-                <span><i class="fas {{icon}}"></i>{{label}}</span>
-              </label>
-            {{/each}}
-          </div>
-          <label class="day-note">
-            <span><i class="fas fa-pen"></i> Nota</span>
-            <input type="text" name="days.{{key}}.note" value="{{note}}" maxlength="240"
-                   placeholder="Ej.: solo desde las 18 h">
-          </label>
-        </article>
-      {{/each}}
-    </div>
-
-    <div class="role-schedule-actions">
-      <button type="button" class="danger-button" data-action="clear">
-        <i class="fas fa-trash-can"></i> Borrar esta semana
-      </button>
-      <button type="submit" class="save-button">
-        <i class="fas fa-check"></i> Guardar esta semana
-      </button>
-    </div>
+<div class="role-schedule-viewer">
+  {{#unless configured}}
+    <section class="role-schedule-empty">
+      <div class="hero-mark"><i class="fas fa-calendar-plus" aria-hidden="true"></i></div>
+      <h2>Este mundo aún no tiene horario</h2>
+      {{#if isGM}}
+        <p>Crea el horario del grupo. Se enviarán el nombre del mundo, el sistema y la lista de usuarios a
+           <code>{{serverUrl}}</code>, y obtendrás un enlace para que cada jugador rellene su disponibilidad
+           sin necesidad de tener Foundry abierto.</p>
+        <button type="button" class="save-button" data-action="create-group">
+          <i class="fas fa-plus"></i> Crear horario
+        </button>
+      {{else}}
+        <p>El máster todavía no ha creado el horario del grupo.</p>
+      {{/if}}
     </section>
-
-    <section class="role-schedule-overview">
-      <div class="section-heading">
-        <div>
-          <p class="eyebrow">TODO EL GRUPO</p>
-          <h2>Cuándo podemos jugar</h2>
-          <p>{{weekRange}}</p>
-          {{#if bestCount}}<p class="best-legend"><i class="fas fa-circle"></i> Mayor coincidencia: {{bestCount}}</p>{{/if}}
-        </div>
-        <div class="group-icon"><i class="fas fa-user-group"></i></div>
+  {{else}}
+    <header class="role-schedule-hero">
+      <div class="hero-mark"><i class="fas fa-calendar-check" aria-hidden="true"></i></div>
+      <div class="hero-copy">
+        <p class="eyebrow">{{#if groupSystem}}{{groupSystem}}{{else}}PLANIFICADOR DEL GRUPO{{/if}}</p>
+        <h2>{{#if groupName}}{{groupName}}{{else}}Horarios de rol{{/if}}</h2>
       </div>
+      <div class="hero-actions">
+        <button type="button" class="save-button" data-action="open-web" title="Abre la web para rellenar tu disponibilidad">
+          <i class="fas fa-pen-to-square"></i> Rellenar
+        </button>
+        {{#if isGM}}
+          <button type="button" class="icon-button" data-action="copy-link" title="Copiar el enlace para el grupo">
+            <i class="fas fa-link"></i>
+          </button>
+        {{/if}}
+        <button type="button" class="icon-button" data-action="sync" title="{{#if isGM}}Enviar mundo y usuarios y recargar{{else}}Recargar{{/if}}">
+          <i class="fas fa-rotate"></i>
+        </button>
+      </div>
+    </header>
 
-      <div class="overview-days">
-        {{#each overview}}
-          <article class="overview-day">
-            <header>
-              <h3>{{label}}</h3>
-              <span>{{dateLabel}}</span>
-            </header>
-            <div class="overview-slots">
-              {{#each slots}}
-                <div class="overview-slot {{#if isBest}}best-slot{{/if}} {{#if @root.canSchedule}}gm-editable{{/if}}"
-                     {{#if @root.canSchedule}}data-action="schedule-session" data-date="{{../dateKey}}" data-slot="{{key}}"
-                     role="button" tabindex="0" title="Programar {{../label}} por la {{label}} como próxima sesión"{{else}}
-                     title="{{label}}: {{users.length}} disponibles"{{/if}}>
-                  <h4>
-                    <span><i class="fas {{icon}}"></i>{{label}}</span>
-                    <b>{{users.length}}</b>
-                  </h4>
-                  <div class="player-chips">
-                    {{#each users}}
-                      <span class="player-chip role-schedule-user" data-user-id="{{id}}" style="--user-color: {{color}}">
-                        <i class="fas fa-circle"></i>{{name}}
-                      </span>
-                    {{else}}
-                      <span class="nobody">—</span>
-                    {{/each}}
+    <nav class="week-navigation" aria-label="Cambiar semana">
+      <button type="button" class="icon-button" data-week-shift="-1" title="Semana anterior">
+        <i class="fas fa-chevron-left"></i>
+      </button>
+      <div class="week-navigation-title">
+        <span>{{#if isCurrentWeek}}ESTA SEMANA{{else}}SEMANA {{weekNumber}}{{/if}}</span>
+        <strong>{{weekRange}}</strong>
+      </div>
+      <button type="button" class="today-button" data-action="current-week" {{#if isCurrentWeek}}disabled{{/if}}>
+        <i class="fas fa-calendar-day"></i> Hoy
+      </button>
+      <button type="button" class="icon-button" data-week-shift="1" title="Semana siguiente">
+        <i class="fas fa-chevron-right"></i>
+      </button>
+    </nav>
+
+    {{#if error}}
+      <section class="role-schedule-empty">
+        <p class="error-text"><i class="fas fa-triangle-exclamation"></i> {{error}}</p>
+        <div class="empty-actions">
+          <button type="button" data-action="sync"><i class="fas fa-rotate"></i> Reintentar</button>
+          {{#if isGM}}
+            <button type="button" data-action="create-group"><i class="fas fa-plus"></i> Crear horario nuevo</button>
+          {{/if}}
+        </div>
+      </section>
+    {{else}}
+      <section class="role-schedule-overview">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">TODO EL GRUPO</p>
+            <h2>Cuándo podemos jugar</h2>
+            {{#if bestCount}}<p class="best-legend"><i class="fas fa-circle"></i> Mayor coincidencia: {{bestCount}}</p>{{/if}}
+            {{#if missing}}<p class="missing-legend">Sin rellenar: {{missing}}</p>{{/if}}
+          </div>
+          <div class="group-icon"><i class="fas fa-user-group"></i></div>
+        </div>
+
+        <div class="overview-days">
+          {{#each overview}}
+            <article class="overview-day">
+              <header>
+                <h3>{{label}}</h3>
+                <span>{{dateLabel}}</span>
+              </header>
+              <div class="overview-slots">
+                {{#each slots}}
+                  <div class="overview-slot {{#if isBest}}best-slot{{/if}} {{#if @root.canSchedule}}gm-editable{{/if}}"
+                       {{#if @root.canSchedule}}data-action="schedule-session" data-date="{{../dateKey}}" data-slot="{{key}}"
+                       role="button" tabindex="0" title="Programar {{../label}} por la {{label}} como próxima sesión"{{else}}
+                       title="{{label}}: {{users.length}} disponibles"{{/if}}>
+                    <h4>
+                      <span><i class="fas {{icon}}"></i>{{label}}</span>
+                      <b>{{users.length}}</b>
+                    </h4>
+                    <div class="player-chips">
+                      {{#each users}}
+                        <span class="player-chip role-schedule-user" data-user-id="{{id}}" style="--user-color: {{color}}">
+                          <i class="fas fa-circle"></i>{{name}}
+                        </span>
+                      {{else}}
+                        <span class="nobody">—</span>
+                      {{/each}}
+                    </div>
                   </div>
-                </div>
-              {{/each}}
-            </div>
-            {{#if notes.length}}
-              <div class="overview-notes">
-                {{#each notes}}
-                  <p><strong style="--user-color: {{color}}">{{name}}</strong><span>{{text}}</span></p>
                 {{/each}}
               </div>
-            {{/if}}
-          </article>
-        {{/each}}
-      </div>
-    </section>
-  </main>
-</form>
+              {{#if notes.length}}
+                <div class="overview-notes">
+                  {{#each notes}}
+                    <p><strong style="--user-color: {{color}}">{{name}}</strong><span>{{text}}</span></p>
+                  {{/each}}
+                </div>
+              {{/if}}
+            </article>
+          {{/each}}
+        </div>
+      </section>
+    {{/if}}
+  {{/unless}}
+</div>
