@@ -300,6 +300,7 @@ class RoleScheduleApp extends Application {
   async getData() {
     const base = { isGM: game.user.isGM, configured: Boolean(groupId()), serverUrl: serverUrl() };
     if (!base.configured) return base;
+    base.shareLink = webLink();
 
     const selectedWeek = weekKey(this.weekStart);
     const weekStart = this.weekStart;
@@ -364,7 +365,9 @@ class RoleScheduleApp extends Application {
     });
     html.find("[data-action='create-group']").on("click", () => createGroup());
     html.find("[data-action='open-web']").on("click", () => window.open(webLink(game.user.id), "_blank", "noopener"));
+    html.find("[data-action='open-link']").on("click", () => window.open(webLink(), "_blank", "noopener"));
     html.find("[data-action='copy-link']").on("click", () => copyText(webLink()));
+    html.find("[data-action='select-link']").on("focus click", (event) => event.currentTarget.select());
     html.find("[data-action='sync']").on("click", async () => {
       if (game.user.isGM) await pushGroup();
       this.reset();

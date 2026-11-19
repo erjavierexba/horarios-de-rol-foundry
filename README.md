@@ -8,7 +8,7 @@ Un planificador por semanas reales para grupos de rol, en dos partes:
 ## Cómo funciona
 
 1. El máster abre **Horarios de rol** en Foundry y pulsa **Crear horario**. El módulo envía el nombre del mundo, el sistema y la lista de usuarios, y recibe un id de grupo. Si había disponibilidad guardada con la versión 1.x, se sube automáticamente.
-2. Con el botón del enlace, el máster copia la dirección de la web y se la pasa al grupo. Desde Foundry, el botón **Rellenar** abre la web con tu usuario ya seleccionado.
+2. El máster ve en el visor el enlace del grupo (la web con `?g=<id>`), con botones para abrirlo y copiarlo. Desde Foundry, el botón **Rellenar** abre la web con tu usuario ya seleccionado.
 3. Cada vez que arranca el mundo, el máster vuelve a enviar el nombre, el sistema y los usuarios. También se envían al crear, borrar o renombrar usuarios. El botón de sincronizar lo fuerza a mano.
 
 Los datos se guardan en Cloudflare D1 (gratis y no se pausa). El id de grupo hace de contraseña: quien tenga el enlace puede rellenar el horario de cualquier usuario del grupo.

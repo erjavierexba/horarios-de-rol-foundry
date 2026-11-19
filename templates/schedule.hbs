@@ -25,16 +25,24 @@
         <button type="button" class="save-button" data-action="open-web" title="Abre la web para rellenar tu disponibilidad">
           <i class="fas fa-pen-to-square"></i> Rellenar
         </button>
-        {{#if isGM}}
-          <button type="button" class="icon-button" data-action="copy-link" title="Copiar el enlace para el grupo">
-            <i class="fas fa-link"></i>
-          </button>
-        {{/if}}
         <button type="button" class="icon-button" data-action="sync" title="{{#if isGM}}Enviar mundo y usuarios y recargar{{else}}Recargar{{/if}}">
           <i class="fas fa-rotate"></i>
         </button>
       </div>
     </header>
+
+    {{#if isGM}}
+      <section class="share-bar" aria-label="Enlace para el grupo">
+        <label for="role-schedule-share-link"><i class="fas fa-link"></i> Enlace para el grupo</label>
+        <input id="role-schedule-share-link" type="text" readonly value="{{shareLink}}" data-action="select-link">
+        <button type="button" data-action="open-link" title="Abrir la web del grupo">
+          <i class="fas fa-arrow-up-right-from-square"></i> Abrir
+        </button>
+        <button type="button" data-action="copy-link" title="Copiar el enlace para pasárselo al grupo">
+          <i class="fas fa-copy"></i> Copiar
+        </button>
+      </section>
+    {{/if}}
 
     <nav class="week-navigation" aria-label="Cambiar semana">
       <button type="button" class="icon-button" data-week-shift="-1" title="Semana anterior">
